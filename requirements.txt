@@ -4,6 +4,10 @@ numpy
 transformers
 torch
 scikit-learn
-joblib
 shap
 matplotlib
+nltk
+plotly
+spacy
+ipython
+joblib

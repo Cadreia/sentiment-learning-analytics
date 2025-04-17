@@ -4,15 +4,6 @@ import streamlit as st
 # Streamlit page configuration for faster loading
 st.set_page_config(page_title="Sentiment Analysis & Learning Analytics", layout="centered")
 
-
-# Placeholder for load_spacy_model (not needed for this project)
-def load_spacy_model():
-    pass
-
-
-load_spacy_model()
-
-
 # Check if already integrated data exists
 def load_integrated_data():
     if st.session_state.get('has_analytics', False) and st.session_state.get('has_feedback', False):
@@ -20,9 +11,9 @@ def load_integrated_data():
     return None
 
 
-if load_integrated_data() is None:
-    st.warning(
-        "Please upload both Analytics Data and Feedback Data using the Data Upload page before proceeding.")
+# if load_integrated_data() is None:
+#     st.warning(
+#         "Please upload both Analytics Data and Feedback Data using the Data Upload page before proceeding.")
 
 # App UI
 
@@ -32,6 +23,7 @@ pages = {
         st.Page("pages/overview.py", title="Overview"),
         st.Page("pages/data_upload.py", title="Data Upload"),
         st.Page("pages/view_all_data.py", title="View All Data"),
+        st.Page("pages/view_all_predictions.py", title="View All Predictions"),
         st.Page("pages/analyze_student.py", title="Analyze Student"),
     ],
     "Analysis Tools": [

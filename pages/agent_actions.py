@@ -2,6 +2,7 @@
 import streamlit as st
 import pandas as pd
 
+
 def page():
     st.title("Agent Actions")
     st.header("Agent Module Actions")
@@ -11,7 +12,8 @@ def page():
         st.warning("No actions have been executed yet. Please run the analysis on the Overview page first.")
         return
 
-    st.write("This section displays the actions taken by the Agent Module based on clustering and engagement predictions.")
+    st.write("This section displays the actions taken by the Agent Module based on clustering and engagement "
+             "predictions.")
 
     # Retrieve integrated data
     data = st.session_state['integrated_data']
@@ -19,7 +21,7 @@ def page():
     # Display flagged students
     st.subheader("Flagged Students for Review")
     flagged_students = data[data["action"].str.contains("Flag Student", na=False)][
-        ["Student_ID", "learning_path", "engagement_pred", "action"]]
+        ["Student_ID", "learning_path", "engagement_pred", "dropout_pred", "performance_pred", "action"]]
     st.dataframe(flagged_students)
 
     # Display teaching strategies and interventions
@@ -37,7 +39,10 @@ def page():
         "Student_ID": data["Student_ID"],
         "learning_path": data["learning_path"],
         "engagement_pred": data["engagement_pred"],
-        "teaching_strategy": [next((s for s in teaching_strategies if f"Student {i}" in s), "Maintain current strategy") for i in range(len(data))],
+        "dropout_pred": data["dropout_pred"],
+        "performance_pred": data["performance_pred"],
+        "teaching_strategy": [next((s for s in teaching_strategies if f"Student {i}" in s), "Maintain current strategy")
+                              for i in range(len(data))],
         "intervention": [next((i for i in interventions if f"Student {idx}" in i), "None") for idx in range(len(data))]
     })
     st.dataframe(strategy_intervention_df)
@@ -56,5 +61,6 @@ def page():
         st.dataframe(monitoring_log)
     except FileNotFoundError:
         st.warning("Monitoring log not found. Please ensure actions have been executed successfully.")
+
 
 page()

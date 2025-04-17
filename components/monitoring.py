@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-import joblib
+import pickle
 import os
 
 logging.basicConfig(filename='system_logs.log', level=logging.INFO,
@@ -56,7 +56,8 @@ def refine_model(model, X, y, feedback_data):
 
         refined_model = RandomForestClassifier(n_estimators=100, random_state=42)
         refined_model.fit(X, y)
-        joblib.dump(refined_model, 'models/refined_model.joblib')
+        with open('models/refined_model.pkl', "wb") as f:
+            pickle.dump(refined_model, f)
         logging.info("Model refined and saved successfully.")
         return refined_model
     except Exception as e:

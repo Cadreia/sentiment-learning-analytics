@@ -1,19 +1,35 @@
-# pages/view_all_data.py
 import streamlit as st
-import pandas as pd
+
 
 def page():
     st.title("View All Data")
 
-    # Check if data is available
-    if 'integrated_data' not in st.session_state:
-        st.warning("No integrated data available. Please run the analysis on the Overview page first.")
+    # Section 1: Integrated Dataset
+    # Check if the analysis has been run
+    if "merged_df" not in st.session_state:
+        st.error("Please run the analysis on the Overview page first to generate the data.")
         return
+    else:
+        st.header("Integrated Dataset")
+        merged_df = st.session_state["merged_df"]
+        st.dataframe(merged_df, use_container_width=True)
 
-    # Retrieve integrated data
-    data = st.session_state['integrated_data']
+    # Section 2: Original Datasets
+    st.header("Original Datasets")
 
-    st.write("Below is the integrated dataset combining analytics and feedback data, along with predictions and actions.")
-    st.dataframe(data)
+    st.subheader("Analytics Data")
+    if "analytics_data" in st.session_state:
+        analytics_df = st.session_state["analytics_data"]
+        st.dataframe(analytics_df, use_container_width=True)
+    else:
+        st.warning("Analytics data not found in session state.")
+
+    st.subheader("Feedback Data")
+    if "feedback_data" in st.session_state:
+        feedback_df = st.session_state["feedback_data"]
+        st.dataframe(feedback_df, use_container_width=True)
+    else:
+        st.warning("Feedback data not found in session state.")
+
 
 page()
