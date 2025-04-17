@@ -1,6 +1,4 @@
-# models/sentiment_analysis.py
 from transformers import BertTokenizer, BertForSequenceClassification
-import numpy as np
 import streamlit as st
 import torch
 from transformers import pipeline  # Added for BERT
@@ -74,8 +72,12 @@ def get_sentiment_scores_old(texts, batch_size=32):
 def get_sentiment_scores(texts, sentiment_pipeline):
     if not texts:  # Handle empty list
         return [0] * len(texts)
+
+    # Sanitize input: replace None or empty strings
+    cleaned_texts = [text if isinstance(text, str) and text.strip() else "neutral" for text in texts]
+
     # Process texts in batches
-    results = sentiment_pipeline(texts, batch_size=32, truncation=True, max_length=512)
+    results = sentiment_pipeline(cleaned_texts, batch_size=32, truncation=True, max_length=512)
     polarities = []
     for result in results:
         score = int(result["label"].split()[0])  # e.g., "3 stars" -> 3

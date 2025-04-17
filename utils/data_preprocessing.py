@@ -13,6 +13,7 @@ from transformers import BertTokenizer, BertModel
 from scripts.sentiment_analysis import get_sentiment_scores, load_sentiment_pipeline
 from scripts.shap import get_shap_results
 import os
+import joblib
 
 # Ensure NLTK data is downloaded
 import nltk
@@ -159,6 +160,11 @@ def preprocess_data(analytics_df, feedback_df):
     pca_analytics = PCA(n_components=0.95)
     reduced_analytics = pca_analytics.fit_transform(X_analytics)
 
+    # Save PCA model for prediction
+    pca_path = "models/pca/pca_analytics.joblib"
+    joblib.dump(pca_analytics, pca_path)
+    print(f"Analytics PCA model saved to {pca_path}")
+
     # Preprocess full analytics data
     analytics_df = normalize_data(analytics_df, numerical_cols, categorical_cols)
 
@@ -217,18 +223,24 @@ def preprocess_data(analytics_df, feedback_df):
         merged_df['labwork_sentiment_score'] = get_sentiment_scores(labwork_text, sentiment_pipeline)
 
     # Dropout label
+    # def determine_dropout(row):
+    #     if row["Grade"] == 4:
+    #         return 1
+    #     if row["Total_Score"] < 0.3:
+    #         return 1
+    #     if row["Attendance (%)"] < 0.3:
+    #         return 1
+    #     if row["Stress_Level (1-10)"] > 0.9:
+    #         return 1
+    #     return 0
+
     def determine_dropout(row):
-        if row["Grade"] == 4:
-            return 1
-        if row["Total_Score"] < 60:
-            return 1
-        if row["Attendance (%)"] < 70:
-            return 1
-        if row["Stress_Level (1-10)"] > 7:
+        if row["Grade"] in [2, 3, 4] and row["Total_Score"] < 0.6 and row["Attendance (%)"] < 0.6 and row["Stress_Level (1-10)"] > 0.4:
             return 1
         return 0
 
     merged_df["dropout"] = merged_df.apply(determine_dropout, axis=1)
+    print(merged_df["dropout"])
     merged_df[numerical_cols] = scaler.fit_transform(merged_df[numerical_cols])
 
     # Cache embeddings
@@ -238,11 +250,15 @@ def preprocess_data(analytics_df, feedback_df):
         coursecontent_embeddings = embeddings["coursecontent"]
         labwork_embeddings = embeddings["labwork"]
     else:
+        # spacy already preprocesses the text by removing non-essential stopwords
+        # coursecontent_embeddings = np.array([
+        #     get_spacy_embedding(text) for text in merged_df["coursecontent_text_cleaned"]
+        # ], dtype=np.float32)
         coursecontent_embeddings = np.array([
-            get_spacy_embedding(text) for text in merged_df["coursecontent_text_cleaned"]
+            get_spacy_embedding(text) for text in merged_df["coursecontent_text"]
         ], dtype=np.float32)
         labwork_embeddings = np.array([
-            get_spacy_embedding(text) for text in merged_df["labwork_text_cleaned"]
+            get_spacy_embedding(text) for text in merged_df["labwork_text"]
         ], dtype=np.float32)
         np.savez(embeddings_path, coursecontent=coursecontent_embeddings, labwork=labwork_embeddings)
 
@@ -280,6 +296,11 @@ def preprocess_data(analytics_df, feedback_df):
 
     pca_integrated = PCA(n_components=0.95)
     reduced_integrated = pca_integrated.fit_transform(X_integrated_array)
+
+    # Save PCA model for integrated features
+    pca_integrated_path = "models/pca/pca_integrated.joblib"
+    joblib.dump(pca_integrated, pca_integrated_path)
+    print(f"Integrated PCA model saved to {pca_integrated_path}")
 
     integrated_data = merged_df.copy()
     # integrated_data[integrated_features] = X_integrated

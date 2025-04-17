@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from scripts.sentiment_analysis import get_sentiment_scores, load_sentiment_pipeline
-from scripts.predictions import predict_performance, predict_engagement, predict_dropout, recommend_action
+from scripts.predictions import predict, recommend_action
 from utils.data_preprocessing import normalize_data
 
 # Custom CSS for professional styling (aligned with view_all_predictions.py)
@@ -146,7 +146,8 @@ def analyze_student_page():
                 age = st.number_input("Age", min_value=0, value=20, key="age")
             coursecontent_text = st.text_area("Course Content Feedback", "The course content was well-structured.",
                                               key="coursecontent")
-            labwork_text = st.text_area("Exercise Content Feedback", "The exercises were challenging but helpful.", key="labwork")
+            labwork_text = st.text_area("Exercise Content Feedback", "The exercises were challenging but helpful.",
+                                        key="labwork")
             submit_button = st.form_submit_button(label="Analyze")
 
         if not submit_button:
@@ -178,11 +179,13 @@ def analyze_student_page():
         if input_method == "Select Existing Student":
             # Check for required prediction columns
             # required_cols = ["coursecontent_polarity", "labwork_polarity", "performance_pred", "dropout_pred_int", "engagement_pred", "recommended_action"]
-            required_cols = ["coursecontent_sentiment_score", "labwork_sentiment_score", "dropout_pred_int", "performance_pred", "engagement_pred"]
+            required_cols = ["coursecontent_sentiment_score", "labwork_sentiment_score", "dropout_pred_int",
+                             "performance_pred", "engagement_pred"]
 
             missing_cols = [col for col in required_cols if col not in student_data.columns]
             if missing_cols:
-                st.error(f"Cached data missing prediction columns: {', '.join(missing_cols)}. Please run the analysis on the Overview page first.")
+                st.error(
+                    f"Cached data missing prediction columns: {', '.join(missing_cols)}. Please run the analysis on the Overview page first.")
                 st.markdown('</div>', unsafe_allow_html=True)
                 st.markdown('</div>', unsafe_allow_html=True)
                 return
@@ -200,21 +203,32 @@ def analyze_student_page():
             normalized_data = normalize_data(student_data, numerical_cols, categorical_cols)
 
             # Sentiment analysis
-            coursecontent_polarity = get_sentiment_scores(coursecontent_text, load_sentiment_pipeline())
-            labwork_polarity = get_sentiment_scores(labwork_text, load_sentiment_pipeline())
+            coursecontent_polarity = get_sentiment_scores(coursecontent_text, load_sentiment_pipeline())[0]
+            labwork_polarity = get_sentiment_scores(labwork_text, load_sentiment_pipeline())[0]
 
             # Predictions
-            # performance_pred = predict_performance(normalized_data)
-            dropout_risk = predict_dropout(normalized_data)
-            # engagement_pred = predict_engagement(normalized_data)
+            dropout_risk = predict(normalized_data, coursecontent_text=coursecontent_text, labwork_text=labwork_text,
+                                   coursecontent_sentiment=coursecontent_polarity, labwork_sentiment=labwork_polarity,
+                                   predict_type="dropout")
+            performance_pred = predict(normalized_data, coursecontent_text=coursecontent_text,
+                                       labwork_text=labwork_text,
+                                       coursecontent_sentiment=coursecontent_polarity,
+                                       labwork_sentiment=labwork_polarity, predict_type="performance")
+            engagement_pred = predict(normalized_data, coursecontent_text=coursecontent_text, labwork_text=labwork_text,
+                                      coursecontent_sentiment=coursecontent_polarity,
+                                      labwork_sentiment=labwork_polarity, predict_type="engagement")
             # action = recommend_action(coursecontent_polarity, labwork_polarity, student_data["Total_Score"].iloc[0])
 
         # Display results
-        st.markdown(f'<div class="metric-box"><b>Course Content Sentiment (BERT):</b> {float(coursecontent_polarity):.2f}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="metric-box"><b>Lab Work Sentiment (BERT):</b> {float(labwork_polarity):.2f}</div>', unsafe_allow_html=True)
-        # st.markdown(f'<div class="metric-box"><b>Predicted Performance (Total Score):</b> {float(performance_pred):.2f}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="metric-box"><b>Dropout Risk:</b> {"High" if int(dropout_risk) == 1 else "Low"}</div>', unsafe_allow_html=True)
-        # st.markdown(f'<div class="metric-box"><b>Engagement Prediction:</b> {str(engagement_pred)}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="metric-box"><b>Course Content Sentiment (BERT):</b> {float(coursecontent_polarity):.2f}</div>',
+            unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-box"><b>Lab Work Sentiment (BERT):</b> {float(labwork_polarity):.2f}</div>',
+                    unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-box"><b>Dropout Risk:</b> {"High" if int(dropout_risk) == 1 else "Low"}</div>',
+                    unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-box"><b>Predicted Performance (Total Score):</b> {float(performance_pred):.2f}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-box"><b>Engagement Prediction:</b> {str(engagement_pred)}</div>', unsafe_allow_html=True)
         # st.markdown(f'<div class="metric-box"><b>Recommended Action:</b> {action}</div>', unsafe_allow_html=True)
 
         # # Display summary
@@ -232,6 +246,7 @@ def analyze_student_page():
 
     except Exception as e:
         st.error(f"Error during analysis: {str(e)}. Please check the input data and try again.")
+        st.exception(e)
 
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
