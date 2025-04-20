@@ -7,6 +7,7 @@ from components.decision_making_unsupervised import unsupervised_decision_making
 from components.decision_making_supervised import supervised_decision_making
 from components.fusion_adaptation import fusion_and_adaptation
 from components.action_execution import action_execution
+from components.monitoring_feedback import MonitoringFeedback  # Added import
 
 # Load sentiment pipeline once at module level
 sentiment_pipeline = load_sentiment_pipeline()
@@ -67,26 +68,16 @@ def analyze_student_page():
     # Main container
     st.markdown('<h1 class="section-header">Analyze Student Performance</h1>', unsafe_allow_html=True)
     st.markdown(
-        "Select a student from the cached dataset or enter new student details to predict performance, engagement, dropout risk, and recommended actions.",
+        "Select a student from the test set or enter new student details to predict performance, engagement, dropout risk, and recommended actions.",
         unsafe_allow_html=True)
 
     # Load cached data
     data = st.session_state.get('merged_df')
-    if data is None:
-        st.error("No cached data available. Please upload data on the Data Upload page.")
+    test_idx = st.session_state.get('test_idx')  # Get test set indices
+    if data is None or test_idx is None:
+        st.error("No cached data or test indices available. Please run the analysis on the Overview page first.")
         st.markdown('</div>', unsafe_allow_html=True)
         return
-
-    # # Define numerical and categorical columns (match preprocess_data and predictions.py)
-    # numerical_cols = [
-    #     "Attendance (%)", "Midterm_Score", "Final_Score", "Assignments_Avg",
-    #     "Quizzes_Avg", "Participation_Score", "Projects_Score", "Total_Score",
-    #     "Study_Hours_per_Week", "Age", "Stress_Level (1-10)", "Sleep_Hours_per_Night"
-    # ]
-    # categorical_cols = [
-    #     "Gender", "Department", "Grade", "Extracurricular_Activities",
-    #     "Internet_Access_at_Home", "Parent_Education_Level", "Family_Income_Level"
-    # ]
 
     # Input method selection
     st.markdown('<div class="sub-section">', unsafe_allow_html=True)
@@ -104,12 +95,21 @@ def analyze_student_page():
     student_id = "New_Student"
 
     if input_method == "Select Existing Student":
-        # Dropdown for student selection
-        student_ids = data.index if "Student_ID" not in data.columns else data["Student_ID"].unique()
-        selected_id = st.selectbox("Select Student ID", options=[""] + list(student_ids), key="student_select")
+        # Dropdown for student selection (test set only)
+        test_student_ids = data.index[test_idx] if "Student_ID" not in data.columns else data.iloc[test_idx]["Student_ID"].unique()
+        selected_id = st.selectbox("Select Student ID", options=[""] + list(test_student_ids), key="student_select")
 
         if selected_id:
-            student_data = data.loc[[selected_id]]  # Keep as DataFrame
+            # Retrieve student data based on Student_ID or index
+            if "Student_ID" in data.columns:
+                student_data = data[data["Student_ID"] == selected_id]  # Filter by Student_ID
+                if student_data.empty:
+                    st.error(f"No student found with Student_ID: {selected_id}")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    return
+            else:
+                student_data = data.loc[[selected_id]]  # Use index
             student_id = selected_id
             coursecontent_text = student_data.get("coursecontent_text_cleaned", "No feedback available").iloc[0]
             labwork_text = student_data.get("labwork_text_cleaned", "No feedback available").iloc[0]
@@ -143,18 +143,22 @@ def analyze_student_page():
                 assignments_avg = st.slider("Assignments Average (0-100)", 0, 100, 80, key="assignments")
                 quizzes_avg = st.slider("Quizzes Average (0-100)", 0, 100, 85, key="quizzes")
                 participation_score = st.slider("Participation Score (0-10)", 0, 10, 8, key="participation")
+                gender = st.selectbox("Gender", ["Male", "Female", "Other"], key="gender")
+                department = st.selectbox("Department", ["Computer Science", "Engineering", "Mathematics", "Other"], key="department")
+                grade = st.selectbox("Grade", ["A", "B", "C", "D", "F"], key="grade")
             with col2:
                 projects_score = st.slider("Projects Score (0-100)", 0, 100, 90, key="projects")
                 total_score = st.slider("Total Score (0-1)", 0.0, 1.0, 0.8, step=0.01, key="total_score")
-                study_hours = st.number_input("Study Hours per Week", min_value=0.0, step=0.1, value=10.0,
-                                              key="study_hours")
+                study_hours = st.number_input("Study Hours per Week", min_value=0.0, step=0.1, value=10.0, key="study_hours")
                 stress_level = st.slider("Stress Level (1-10)", 1, 10, 5, key="stress")
                 sleep_hours = st.number_input("Sleep Hours per Night", min_value=0.0, step=0.1, value=7.0, key="sleep")
                 age = st.number_input("Age", min_value=0, value=20, key="age")
-            coursecontent_text = st.text_area("Course Content Feedback", "The course content was well-structured.",
-                                              key="coursecontent")
-            labwork_text = st.text_area("Exercise Content Feedback", "The exercises were challenging but helpful.",
-                                        key="labwork")
+                extracurricular = st.selectbox("Extracurricular Activities", ["Yes", "No"], key="extracurricular")
+                internet_access = st.selectbox("Internet Access at Home", ["Yes", "No"], key="internet_access")
+                parent_education = st.selectbox("Parent Education Level", ["High School", "Bachelor's", "Master's", "PhD", "Other"], key="parent_education")
+                family_income = st.selectbox("Family Income Level", ["Low", "Medium", "High"], key="family_income")
+            coursecontent_text = st.text_area("Course Content Feedback", "The course content was well-structured.", key="coursecontent")
+            labwork_text = st.text_area("Exercise Content Feedback", "The exercises were challenging but helpful.", key="labwork")
             submit_button = st.form_submit_button(label="Analyze")
 
         if not submit_button:
@@ -175,7 +179,14 @@ def analyze_student_page():
             "Study_Hours_per_Week": [study_hours],
             "Stress_Level (1-10)": [stress_level],
             "Sleep_Hours_per_Night": [sleep_hours],
-            "Age": [age]
+            "Age": [age],
+            "Gender": [gender],
+            "Department": [department],
+            "Grade": [grade],
+            "Extracurricular_Activities": [extracurricular],
+            "Internet_Access_at_Home": [internet_access],
+            "Parent_Education_Level": [parent_education],
+            "Family_Income_Level": [family_income]
         }, index=[student_id])
 
     # Perform analysis
@@ -183,25 +194,10 @@ def analyze_student_page():
     st.markdown('<h2 class="section-header">Analysis Results</h2>', unsafe_allow_html=True)
 
     try:
-        # # Prepare student features (normalize, compute sentiment, generate embeddings)
-        # normalized_data, X_integrated = prepare_student_features(
-        #     student_data,
-        #     coursecontent_text,
-        #     labwork_text,
-        #     numerical_cols,
-        #     categorical_cols,
-        #     sentiment_pipeline=sentiment_pipeline
-        # )
-        #
-        # # Extract sentiment scores from normalized_data
-        # coursecontent_polarity = normalized_data["coursecontent_sentiment_score"].iloc[0]
-        # labwork_polarity = normalized_data["labwork_sentiment_score"].iloc[0]
-
         if input_method == "Select Existing Student":
             # Check for required prediction columns
             required_cols = ["coursecontent_sentiment_score", "labwork_sentiment_score", "dropout_pred_int",
                              "performance_pred", "engagement_pred"]
-
             missing_cols = [col for col in required_cols if col not in student_data.columns]
             if missing_cols:
                 st.error(
@@ -217,38 +213,40 @@ def analyze_student_page():
             performance_pred = float(student_data["performance_pred"].iloc[0])
             engagement_pred = str(student_data["engagement_pred"].iloc[0])
 
-            # Retrieve cluster from session state
-            clusters = st.session_state.get("clusters", [])
-            if not clusters:
-                st.error("Cluster data not found. Please run the Overview page first.")
+            # Retrieve unsupervised decisions from session state
+            unsupervised_decisions_list = st.session_state.get("unsupervised_decisions_list", [])
+            if not unsupervised_decisions_list:
+                st.error("Unsupervised decisions not found. Please run the Overview page first.")
                 return
-            cluster_idx = list(data.index).index(selected_id)
-            cluster_label = clusters[cluster_idx]
-            # Retrieve anomaly status
-            anomalies = st.session_state.get("anomalies", [])
-            is_anomaly = anomalies[cluster_idx] if anomalies else False
-
-            # Manually create unsupervised decisions since we already have cluster and anomaly
-            teaching_strategy = "Focus on foundational skills and regular check-ins." if cluster_label == 0 else \
-                "Encourage advanced projects and peer collaboration." if cluster_label == 1 else \
-                    "Provide additional resources and interactive activities."
-            review_flag = f"Student {student_id} flagged for review due to anomalous behavior." if is_anomaly else None
-            unsupervised_decisions = {
-                "student_id": student_id,
-                "cluster": cluster_label,
-                "is_anomaly": is_anomaly,
-                "teaching_strategy": teaching_strategy,
-                "review_flag": review_flag
-            }
+            # Find the decision for the selected student
+            unsupervised_decisions = next(
+                (decision for decision in unsupervised_decisions_list if decision["student_id"] == student_id),
+                None
+            )
+            if not unsupervised_decisions:
+                st.error(f"No unsupervised decisions found for Student ID: {student_id}.")
+                return
+            cluster_label = unsupervised_decisions["cluster"]
+            is_anomaly = unsupervised_decisions["is_anomaly"]
+            teaching_strategy = unsupervised_decisions["teaching_strategy"]
+            review_flag = unsupervised_decisions["review_flag"]
 
         else:
-            # Compute predictions directly
-            dropout_risk, normalized_data, X_integrated = predict(
+            # Prepare student features for new data
+            normalized_data, X_integrated = prepare_student_features(
+                student_data,
+                coursecontent_text,
+                labwork_text,
+                sentiment_pipeline=sentiment_pipeline
+            )
+            coursecontent_polarity = normalized_data["coursecontent_sentiment_score"].iloc[0]
+            labwork_polarity = normalized_data["labwork_sentiment_score"].iloc[0]
+
+            # Compute predictions for new student
+            dropout_risk, _, _ = predict(
                 student_data,
                 coursecontent_text=coursecontent_text,
                 labwork_text=labwork_text,
-                # coursecontent_sentiment=coursecontent_polarity,
-                # labwork_sentiment=labwork_polarity,
                 model_type="integrated",
                 predict_type="dropout"
             )
@@ -267,38 +265,43 @@ def analyze_student_page():
                 predict_type="engagement"
             )
 
-            coursecontent_polarity = normalized_data['coursecontent_sentiment_score']
-            labwork_polarity = normalized_data['labwork_sentiment_score']
-
-            # Load pre-trained models for unsupervised decision-making
+            # Use pretrained unsupervised models
             pre_trained_models = st.session_state.get("unsupervised_models")
             if not pre_trained_models:
                 st.error("Unsupervised models not found. Please run the Overview page first.")
                 return
-
-            # Assign to existing cluster using pre-trained models
-            unsupervised_decisions = unsupervised_decision_making(X_integrated, student_id,
-                                                                  pre_trained_models=pre_trained_models)
+            unsupervised_decisions = unsupervised_decision_making(
+                X_integrated, student_id, pre_trained_models=pre_trained_models
+            )
+            # Ensure student_id is included in unsupervised_decisions
+            if "student_id" not in unsupervised_decisions:
+                unsupervised_decisions["student_id"] = student_id
+            cluster_label = unsupervised_decisions["cluster"]
+            is_anomaly = unsupervised_decisions["is_anomaly"]
+            teaching_strategy = unsupervised_decisions["teaching_strategy"]
+            review_flag = unsupervised_decisions["review_flag"]
 
         # Compute detailed decisions and actions
-        # Supervised decision-making
         supervised_decisions = supervised_decision_making(student_data, coursecontent_text, labwork_text, student_id,
                                                           model_type="integrated")
-
-        # Fusion and adaptation
         fused_decisions = fusion_and_adaptation(unsupervised_decisions, supervised_decisions)
-
-        # Action execution
         executed_actions = action_execution(fused_decisions, student_id)
-
-        # Basic recommendation
         basic_recommendation = recommend_action(coursecontent_polarity, labwork_polarity,
                                                 student_data["Total_Score"].iloc[0])
 
-        # Display predictions
-        st.markdown(
-            f'<div class="metric-box"><b>Course Content Sentiment (BERT):</b> {float(coursecontent_polarity):.2f}</div>',
-            unsafe_allow_html=True)
+        # Log actions and refine models for new student data
+        if input_method == "Enter New Student Data":
+            with st.spinner("Logging actions and refining models..."):
+                monitoring = MonitoringFeedback()
+                # Log actions for the new student
+                monitoring.log_actions_and_outcomes(student_id, executed_actions, outcome="Pending", feedback_score=None)
+                # Optionally retrain models using the new student's data
+                updated_models = monitoring.use_feedback_to_refine_models(X_integrated, None, student_data)
+
+        # Display predictions (similar to overview.py)
+        st.subheader("Predictive Modeling Results")
+        st.markdown(f'<div class="metric-box"><b>Course Content Sentiment (BERT):</b> {float(coursecontent_polarity):.2f}</div>',
+                    unsafe_allow_html=True)
         st.markdown(f'<div class="metric-box"><b>Lab Work Sentiment (BERT):</b> {float(labwork_polarity):.2f}</div>',
                     unsafe_allow_html=True)
         st.markdown(f'<div class="metric-box"><b>Dropout Risk:</b> {"High" if int(dropout_risk) == 1 else "Low"}</div>',
@@ -308,33 +311,31 @@ def analyze_student_page():
             unsafe_allow_html=True)
         st.markdown(f'<div class="metric-box"><b>Engagement Prediction:</b> {str(engagement_pred)}</div>',
                     unsafe_allow_html=True)
-
-        # Display cluster assignment
-        st.markdown(f'<div class="metric-box"><b>Assigned Cluster:</b> {unsupervised_decisions["cluster"]}</div>',
+        st.markdown(f'<div class="metric-box"><b>Assigned Cluster:</b> {cluster_label}</div>',
+                    unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-box"><b>Anomaly Status:</b> {"Anomaly" if is_anomaly else "Normal"}</div>',
                     unsafe_allow_html=True)
 
-        # Display basic recommendation
-        st.markdown("#### Basic Recommendation")
-        st.markdown(f'<div class="metric-box"><b>Recommendation:</b> {basic_recommendation}</div>',
-                    unsafe_allow_html=True)
-
-        # Display detailed recommendations
-        st.markdown("#### Detailed Recommendations")
-        feedback = supervised_decisions["feedback"]
-        teaching_strategy = unsupervised_decisions["teaching_strategy"]
-        interventions = supervised_decisions["interventions"]
-        review_flag = unsupervised_decisions["review_flag"]
-
-        st.markdown(f'<div class="metric-box"><b>Feedback:</b>\n{feedback}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="metric-box"><b>Teaching Strategy:</b> {teaching_strategy}</div>',
-                    unsafe_allow_html=True)
-        st.markdown(f'<div class="metric-box"><b>Interventions:</b> {", ".join(interventions)}</div>',
-                    unsafe_allow_html=True)
+        # Display recommended actions (similar to overview.py)
+        st.subheader("Recommended Actions")
+        st.markdown("**Unsupervised Actions:**")
+        unsupervised_actions = []
+        if teaching_strategy:
+            unsupervised_actions.append(f"Teaching Strategy for Student {student_id}: {teaching_strategy}")
         if review_flag:
-            st.markdown(f'<div class="metric-box"><b>Review Flag:</b> {review_flag}</div>', unsafe_allow_html=True)
+            unsupervised_actions.append(review_flag)
+        for action in unsupervised_actions:
+            st.markdown(f'<div class="metric-box">{action}</div>', unsafe_allow_html=True)
+
+        st.markdown("**Supervised Actions:**")
+        supervised_actions = [supervised_decisions["feedback"]]
+        for intervention in supervised_decisions["interventions"]:
+            supervised_actions.append(f"Intervention for Student {student_id}: {intervention}")
+        for action in supervised_actions:
+            st.markdown(f'<div class="metric-box">{action}</div>', unsafe_allow_html=True)
 
         # Display executed actions
-        st.markdown("#### Executed Actions")
+        st.subheader("Executed Actions")
         st.markdown(
             f'<div class="metric-box"><b>Messages Sent:</b>\n{chr(10).join(executed_actions["messages"])}</div>',
             unsafe_allow_html=True)

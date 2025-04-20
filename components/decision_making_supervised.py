@@ -106,17 +106,17 @@ def provide_feedback(dropout_risk, performance_pred, engagement_pred, student_id
     """
     feedback = f"Feedback for Student {student_id}:\n"
     if dropout_risk == 1:
-        feedback += "- High dropout risk detected. Immediate support recommended.\n"
+        feedback += "\n - High dropout risk detected. Immediate support recommended.\n"
     else:
-        feedback += "- Low dropout risk. Continue monitoring.\n"
+        feedback += "\n - Low dropout risk. Continue monitoring.\n"
 
-    feedback += f"- Performance Prediction: {performance_pred:.2f}. "
+    feedback += f"\n - Performance Prediction: {performance_pred:.2f}. "
     if performance_pred < 0.6:
         feedback += "Consider additional academic support.\n"
     else:
         feedback += "Performance is satisfactory.\n"
 
-    feedback += f"- Engagement Level: {engagement_pred}. "
+    feedback += f"\n - Engagement Level: {engagement_pred}. "
     if engagement_pred == "Low":
         feedback += "Engagement needs improvement.\n"
     else:

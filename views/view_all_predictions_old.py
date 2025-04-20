@@ -101,42 +101,43 @@ def parse_classification_report(report_str):
 
 def predictions_page():
     # Main container
-    st.markdown('<h1 class="section-header">Predictions and Model Comparison</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="section-header">Test Set Predictions and Model Comparison</h1>', unsafe_allow_html=True)
     st.markdown(
-        "Review dropout risk, performance, and engagement predictions, and compare model performance with and without "
-        "sentiment data.",
+        "Review dropout risk, performance, and engagement predictions for the test set, and compare model performance with and without sentiment data.",
         unsafe_allow_html=True)
 
     # Check if necessary data is available in session state
-    if "integrated_acc" not in st.session_state:
-        st.error("Please run the analysis on the Overview page first to generate predictions and comparison results.")
+    if "integrated_acc" not in st.session_state or "test_idx" not in st.session_state:
+        st.error("Please run the analysis on the Overview page first to generate test set predictions and comparison results.")
         st.markdown('</div>', unsafe_allow_html=True)
         return
 
-    # Load the prediction CSV files
+    # Load the prediction CSV files (test set only)
     try:
         integrated_predictions = pd.read_csv("data/integrated_data_predictions.csv")
         analytics_predictions = pd.read_csv("data/analytics_data_predictions.csv")
     except FileNotFoundError as e:
-        st.error(f"Prediction files not found: {e}. Please ensure the analysis has been run on the Overview page.")
+        st.error(f"Test set prediction files not found: {e}. Please ensure the analysis has been run on the Overview page.")
         st.markdown('</div>', unsafe_allow_html=True)
         return
 
-    # Retrieve comparison results from session state
+    # Retrieve comparison results and test_idx from session state
     integrated_acc = st.session_state["integrated_acc"]
     analytics_acc = st.session_state["analytics_acc"]
     integrated_report = st.session_state["integrated_report"]
     analytics_report = st.session_state["analytics_report"]
     integrated_cv = st.session_state["integrated_cv"]
     analytics_cv = st.session_state["analytics_cv"]
+    test_idx = st.session_state["test_idx"]
 
     # Predictions Section
     st.markdown('<div class="sub-section">', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">Predictions</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">Test Set Predictions</h2>', unsafe_allow_html=True)
+    st.markdown(f"Displaying predictions for {len(test_idx)} test set students.")
 
     # Integrated Data Predictions
     st.markdown("#### Integrated Data Predictions (With Sentiment)")
-    st.markdown("Dropout risk, performance, and engagement predictions using both analytics and sentiment data.")
+    st.markdown("Dropout risk, performance, and engagement predictions for the test set using both analytics and sentiment data.")
     st.dataframe(
         integrated_predictions,
         use_container_width=True,
@@ -145,7 +146,7 @@ def predictions_page():
 
     # Analytics-Only Data Predictions
     st.markdown("#### Analytics-Only Data Predictions (Without Sentiment)")
-    st.markdown("Predictions based solely on analytics data, excluding sentiment.")
+    st.markdown("Test set predictions based solely on analytics data, excluding sentiment.")
     st.dataframe(
         analytics_predictions,
         use_container_width=True,
@@ -156,7 +157,7 @@ def predictions_page():
     # Model Comparison Section
     st.markdown('<div class="sub-section">', unsafe_allow_html=True)
     st.markdown('<h2 class="section-header">Model Comparison (Dropout Prediction)</h2>', unsafe_allow_html=True)
-    st.markdown("Compare the performance of dropout prediction models with and without sentiment data.")
+    st.markdown("Compare the performance of dropout prediction models on the test set with and without sentiment data.")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -164,7 +165,7 @@ def predictions_page():
         st.markdown(f'<div class="metric-box"><b>Test Accuracy:</b> {integrated_acc:.4f}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="metric-box"><b>Cross-Validation Accuracy:</b> {integrated_cv:.4f}</div>',
                     unsafe_allow_html=True)
-        st.markdown("**Classification Report:**")
+        st.markdown("**Classification Report (Test Set):**")
         try:
             report_df = parse_classification_report(integrated_report)
             report_df[['Precision', 'Recall', 'F1-Score']] = report_df[['Precision', 'Recall', 'F1-Score']].apply(
@@ -193,7 +194,7 @@ def predictions_page():
         st.markdown(f'<div class="metric-box"><b>Test Accuracy:</b> {analytics_acc:.4f}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="metric-box"><b>Cross-Validation Accuracy:</b> {analytics_cv:.4f}</div>',
                     unsafe_allow_html=True)
-        st.markdown("**Classification Report:**")
+        st.markdown("**Classification Report (Test Set):**")
         try:
             report_df = parse_classification_report(analytics_report)
             report_df[['Precision', 'Recall', 'F1-Score']] = report_df[['Precision', 'Recall', 'F1-Score']].apply(
@@ -217,8 +218,8 @@ def predictions_page():
 
     # Visual Comparison
     st.markdown('<div class="sub-section">', unsafe_allow_html=True)
-    st.markdown("#### Model Performance Comparison")
-    st.markdown("Interactive bar chart comparing test accuracies of the two models. Hover to see details.")
+    st.markdown("#### Test Set Model Performance Comparison")
+    st.markdown("Interactive bar chart comparing test set accuracies of the two models. Hover to see details.")
     # Create Plotly bar chart
     df = pd.DataFrame({
         "Model": ["Integrated", "Analytics-Only"],
@@ -230,7 +231,7 @@ def predictions_page():
         y="Accuracy",
         color="Model",
         color_discrete_map={"Integrated": "#1e88e5", "Analytics-Only": "#43a047"},
-        title="Dropout Prediction: Integrated vs Analytics-Only",
+        title="Dropout Prediction: Integrated vs Analytics-Only (Test Set)",
         text="Accuracy"  # Display values on bars
     )
     fig.update_traces(

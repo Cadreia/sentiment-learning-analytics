@@ -85,7 +85,7 @@ def send_automated_messages(feedback, interventions, student_id, priority):
     list: List of messages sent.
     """
     messages = []
-    messages.append(f"To Student {student_id}: {feedback}")
+    messages.append(f"\n To Student {student_id}: {feedback}")
 
     if priority in ["Medium", "High"]:
         messages.append(f"To Instructor: Please review Student {student_id}. Priority: {priority}.")

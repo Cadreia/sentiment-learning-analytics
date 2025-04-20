@@ -43,8 +43,8 @@ def page():
     with st.spinner("Training models..."):
         (dropout_model, performance_model, engagement_model, groups,
          integrated_acc, analytics_acc, integrated_report, analytics_report,
-         integrated_cv, analytics_cv, merged_df) = train_and_evaluate_models(reduced_integrated, reduced_analytics,
-                                                                             merged_df)
+         integrated_cv, analytics_cv, merged_df, test_idx) = train_and_evaluate_models(reduced_integrated, reduced_analytics,
+                                                                                       merged_df)
 
     # Update merged_df with predictions from train_and_evaluate_models
     merged_df["dropout_pred_int"] = merged_df["dropout_pred_int"]
@@ -54,34 +54,22 @@ def page():
 
     # Unsupervised Decision Making
     with st.spinner("Performing Unsupervised Decision Making..."):
-        unsupervised_model_path = "models/unsupervised"
-        # if not os.path.exists(unsupervised_model_path):
+        # unsupervised_model_path = "models/unsupervised"
         # Run on the full dataset to save the models
         full_decisions = unsupervised_decision_making(X_integrated, student_id=None, save_models=True)
         st.session_state["unsupervised_decisions"] = full_decisions
-        # else:
-        #     full_decisions = st.session_state.get("unsupervised_decisions")
+        st.session_state["unsupervised_models"] = full_decisions.get("models", {})  # Store pretrained models
 
-        # # Process each student for unsupervised decisions
-        # unsupervised_decisions_list = []
-        # for idx in range(len(X_integrated)):
-        #     X_student = X_integrated[idx:idx + 1]
-        #     student_id = merged_df.index[idx]
-        #     decisions = unsupervised_decision_making(X_student, student_id)
-        #     unsupervised_decisions_list.append(decisions)
-
-        # Extract decisions for test students
+        # Extract decisions for test students only, using Student_ID
         unsupervised_decisions_list = []
-        for idx in range(len(X_integrated)):
-        # for idx in range(10):
-            student_id = merged_df.index[idx]
-            cluster_label = full_decisions["cluster"][idx] if isinstance(full_decisions["cluster"], np.ndarray) else \
-            full_decisions["cluster"]
-            is_anomaly = full_decisions["is_anomaly"][idx] if isinstance(full_decisions["is_anomaly"], np.ndarray) else \
-            full_decisions["is_anomaly"]
+        test_student_ids = merged_df.iloc[test_idx]["Student_ID"].unique() if "Student_ID" in merged_df.columns else merged_df.index[test_idx]
+        for student_id in test_student_ids:
+            # Find the index corresponding to this Student_ID
+            idx = merged_df[merged_df["Student_ID"] == student_id].index[0] if "Student_ID" in merged_df.columns else student_id
+            cluster_label = full_decisions["cluster"][idx] if isinstance(full_decisions["cluster"], np.ndarray) else full_decisions["cluster"]
+            is_anomaly = full_decisions["is_anomaly"][idx] if isinstance(full_decisions["is_anomaly"], np.ndarray) else full_decisions["is_anomaly"]
             teaching_strategy = full_decisions["teaching_strategy"][idx] if isinstance(
                 full_decisions["teaching_strategy"], list) else full_decisions["teaching_strategy"]
-            # Compute review_flag using the actual student_id
             review_flag = f"Student {student_id} flagged for review due to anomalous behavior." if is_anomaly else None
             unsupervised_decisions_list.append({
                 "student_id": student_id,
@@ -90,21 +78,24 @@ def page():
                 "teaching_strategy": teaching_strategy,
                 "review_flag": review_flag
             })
+            # Log using Student_ID
+            # st.write(f"Processed unsupervised decisions for Student ID: {student_id}, Cluster: {cluster_label}, Anomaly: {is_anomaly}")
 
     # Supervised Decision Making
     with st.spinner("Performing Supervised Decision Making..."):
-        # Process each student for supervised decisions
+        # Process each test student for supervised decisions
         supervised_decisions_list = []
-        for idx in range(len(merged_df)):
-        # for idx in range(10):
-            student_data = merged_df.iloc[[idx]]
-            student_id = student_data.index[0]
-            coursecontent_text = student_data["coursecontent_text"].iloc[
-                0] if "coursecontent_text" in student_data.columns else ""
+        test_student_ids = merged_df.iloc[test_idx]["Student_ID"].unique() if "Student_ID" in merged_df.columns else merged_df.index[test_idx]
+        for student_id in test_student_ids:
+            # Filter student data by Student_ID
+            student_data = merged_df[merged_df["Student_ID"] == student_id] if "Student_ID" in merged_df.columns else merged_df.loc[[student_id]]
+            coursecontent_text = student_data["coursecontent_text"].iloc[0] if "coursecontent_text" in student_data.columns else ""
             labwork_text = student_data["labwork_text"].iloc[0] if "labwork_text" in student_data.columns else ""
             decisions = supervised_decision_making(student_data, coursecontent_text, labwork_text, student_id,
                                                    model_type="integrated")
             supervised_decisions_list.append(decisions)
+            # Log using Student_ID
+            # st.write(f"Processed supervised decisions for Student ID: {student_id}")
 
     # Extract predictions for display
     performance_pred = merged_df["performance_pred"].values
@@ -115,11 +106,11 @@ def page():
     # Display Predictions
     st.subheader("Predictive Modeling Results")
     st.write("**Dropout Risk Predictions (Integrated):**")
-    st.write(merged_df[["dropout", "dropout_pred_int"]].head())
+    st.write(merged_df.loc[test_idx, ["dropout", "dropout_pred_int"]].head())
     st.write("**Performance Predictions:**")
-    st.write(merged_df[["Total_Score", "performance_pred"]].head())
+    st.write(merged_df.loc[test_idx, ["Total_Score", "performance_pred"]].head())
     st.write("**Engagement Predictions:**")
-    st.write(merged_df[["engagement_label", "engagement_pred"]].head())
+    st.write(merged_df.loc[test_idx, ["engagement_label", "engagement_pred"]].head())
 
     # Extract actions for display
     unsupervised_actions = []
@@ -133,8 +124,8 @@ def page():
     supervised_actions = []
     for decision in supervised_decisions_list:
         supervised_actions.append(decision["feedback"])
-    for intervention in decision["interventions"]:
-        supervised_actions.append(f"Intervention for Student {decision['student_id']}: {intervention}")
+        for intervention in decision["interventions"]:
+            supervised_actions.append(f"Intervention for Student {decision['student_id']}: {intervention}")
 
     # Display Actions
     st.subheader("Recommended Actions")
@@ -147,6 +138,7 @@ def page():
 
     # Save results to session state for use in other pages
     st.session_state["merged_df"] = merged_df
+    st.session_state["test_idx"] = test_idx
     st.session_state["clusters"] = [decision["cluster"] for decision in unsupervised_decisions_list]
     st.session_state["anomalies"] = outliers
     st.session_state["performance_pred"] = performance_pred
@@ -167,29 +159,30 @@ def page():
     # Fusion and Adaptation
     with st.spinner("Fusing decisions..."):
         fused_decisions_list = []
-        fused_decisions = None  # remove?
-    for unsup_dec, sup_dec in zip(unsupervised_decisions_list, supervised_decisions_list):
-        fused_decisions = fusion_and_adaptation(unsup_dec, sup_dec)
-    fused_decisions_list.append(fused_decisions)
+        for unsup_dec, sup_dec in zip(unsupervised_decisions_list, supervised_decisions_list):
+            fused_decisions = fusion_and_adaptation(unsup_dec, sup_dec)
+            fused_decisions_list.append(fused_decisions)
 
     # Action Execution
     with st.spinner("Executing actions..."):
         executed_actions_list = []
-    for fused_decisions in fused_decisions_list:
-        student_id = fused_decisions["student_id"]
-    executed_actions = action_execution(fused_decisions, student_id)
-    executed_actions_list.append(executed_actions)
+        for fused_decisions in fused_decisions_list:
+            student_id = fused_decisions["student_id"]
+            executed_actions = action_execution(fused_decisions, student_id)
+            executed_actions_list.append(executed_actions)
 
     # Monitoring and Feedback Loop
     with st.spinner("Logging actions and refining models..."):
         monitoring = MonitoringFeedback()
-    for executed_actions in executed_actions_list:
-        student_id = executed_actions["student_id"]
-    monitoring.log_actions_and_outcomes(student_id, executed_actions, outcome="Pending", feedback_score=None)
-    # Optionally retrain models using the full dataset
-    updated_models = monitoring.use_feedback_to_refine_models(X_integrated, reduced_analytics, merged_df)
+        for executed_actions in executed_actions_list:
+            student_id = executed_actions["student_id"]
+            monitoring.log_actions_and_outcomes(student_id, executed_actions, outcome="Pending", feedback_score=None)
+        # Optionally retrain models using the full dataset
+        updated_models = monitoring.use_feedback_to_refine_models(X_integrated, reduced_analytics, merged_df)
 
     # Store results in session state for other pages
+    st.session_state["unsupervised_decisions_list"] = unsupervised_decisions_list
+    st.session_state["supervised_decisions_list"] = supervised_decisions_list
     st.session_state['executed_actions'] = executed_actions_list
     st.session_state['reduced_integrated'] = reduced_integrated
     st.session_state['X_integrated'] = X_integrated

@@ -1,8 +1,3 @@
-# def fusion_and_adaptation(unsupervised_actions, supervised_actions):
-#     fused_actions = unsupervised_actions + supervised_actions
-#     return fused_actions
-
-
 def fusion_and_adaptation(unsupervised_decisions, supervised_decisions):
     """
     Merge unsupervised and supervised decisions and perform decision fusion.
@@ -21,7 +16,7 @@ def fusion_and_adaptation(unsupervised_decisions, supervised_decisions):
     teaching_strategy = unsupervised_decisions["teaching_strategy"]
     review_flag = unsupervised_decisions["review_flag"]
 
-    # Extract key unsupervised decisions
+    # Extract key supervised decisions
     dropout_risk = supervised_decisions["dropout_risk"]
     performance_pred = supervised_decisions["performance_pred"]
     engagement_pred = supervised_decisions["engagement_pred"]

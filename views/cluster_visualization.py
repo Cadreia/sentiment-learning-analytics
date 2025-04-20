@@ -63,13 +63,13 @@ def cluster_visualization_page():
     st.markdown('<div class="main-header">Interactive 3D Cluster Visualization</div>', unsafe_allow_html=True)
 
     # Check if necessary data is available in session state
-    if "reduced_integrated" not in st.session_state or "clusters" not in st.session_state or "anomalies" not in st.session_state:
+    if "reduced_integrated" not in st.session_state or "groups" not in st.session_state or "anomalies" not in st.session_state:
         st.error("Please run the analysis on the Overview page first to generate the clustering results.")
         return
 
     # Retrieve data from session state
     X_integrated = st.session_state["X_integrated"]
-    clusters = st.session_state["clusters"]
+    clusters = st.session_state["groups"]  # Use groups instead of clusters for full dataset
     anomalies = st.session_state["anomalies"]
 
     # For hover data and cluster summary, we still need merged_df

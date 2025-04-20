@@ -77,6 +77,7 @@ def unsupervised_decision_making(X_integrated, student_id, pre_trained_models=No
     review_flag = flag_students_for_review(is_anomaly, student_id)
 
     return {
+        "student_id": student_id,
         "cluster": cluster_label,
         "is_anomaly": is_anomaly,
         "teaching_strategy": teaching_strategy,
