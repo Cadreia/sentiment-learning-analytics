@@ -20,16 +20,16 @@ def load_integrated_data():
 # Define the navigation structure with pages grouped into categories
 pages = {
     "Student Insights": [
-        st.Page("pages/overview.py", title="Overview"),
-        st.Page("pages/data_upload.py", title="Data Upload"),
-        st.Page("pages/view_all_data.py", title="View All Data"),
-        st.Page("pages/view_all_predictions.py", title="View All Predictions"),
-        st.Page("pages/analyze_student.py", title="Analyze Student"),
+        st.Page("views/overview.py", title="Overview"),
+        st.Page("views/data_upload.py", title="Data Upload"),
+        st.Page("views/view_all_data.py", title="View All Data"),
+        st.Page("views/view_all_predictions.py", title="View All Predictions"),
+        st.Page("views/analyze_student.py", title="Analyze Student"),
     ],
     "Analysis Tools": [
-        st.Page("pages/shap_explanations.py", title="SHAP Explanations"),
-        st.Page("pages/cluster_visualization.py", title="Cluster Visualization"),
-        st.Page("pages/agent_actions.py", title="Agent Actions"),
+        st.Page("views/shap_explanations.py", title="SHAP Explanations"),
+        st.Page("views/cluster_visualization.py", title="Cluster Visualization"),
+        st.Page("views/agent_actions.py", title="Agent Actions"),
     ],
 }
 

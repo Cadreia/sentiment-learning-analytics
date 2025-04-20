@@ -1,4 +1,3 @@
-# models/modeling.py
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, GradientBoostingClassifier, \
@@ -8,12 +7,10 @@ from sklearn.svm import SVC, SVR
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import accuracy_score, classification_report, mean_squared_error, r2_score
 from sklearn.preprocessing import LabelEncoder
-from sklearn.cluster import KMeans
-from sklearn.ensemble import IsolationForest
-from sklearn.metrics import silhouette_score
 import pickle
 import os
 import streamlit as st
+from utils.clustering import cluster_students
 
 
 def check_data(X, y, task):
@@ -83,38 +80,6 @@ def evaluate_regression_model(model, X_train, X_test, y_train, y_test, model_nam
     except Exception as e:
         print(f"{task} - {model_name} failed: {str(e)}")
         return None, -1
-
-
-def determine_optimal_clusters(X, max_k=10):
-    """Determine the optimal number of clusters using silhouette score."""
-    silhouette_scores = []
-    for k in range(2, max_k + 1):
-        kmeans = KMeans(n_clusters=k, random_state=42)
-        labels = kmeans.fit_predict(X)
-        score = silhouette_score(X, labels)
-        silhouette_scores.append(score)
-    optimal_k = range(2, max_k + 1)[np.argmax(silhouette_scores)]
-    print(f"Optimal number of clusters (K): {optimal_k} with silhouette score: {max(silhouette_scores):.4f}")
-    return optimal_k
-
-
-def cluster_students(X):
-    optimal_k = determine_optimal_clusters(X)
-    kmeans = KMeans(n_clusters=optimal_k, random_state=42)
-    clusters = kmeans.fit_predict(X)
-    return clusters
-
-
-def detect_anomalies(X):
-    iso_forest = IsolationForest(contamination=0.1, random_state=42)
-    anomalies = iso_forest.fit_predict(X)
-    return anomalies == -1
-
-
-def detect_outliers(X):
-    iso_forest = IsolationForest(contamination=0.1, random_state=42)
-    outliers = iso_forest.fit_predict(X)
-    return outliers == -1
 
 
 @st.cache_data

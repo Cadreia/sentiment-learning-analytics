@@ -1,3 +1,4 @@
+# utils/data_preprocessing.py
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
@@ -38,13 +39,6 @@ def load_spacy_model():
 
 nlp = load_spacy_model()
 
-# Define numerical and categorical columns at module level for export
-numerical_cols = ['Attendance (%)', 'Midterm_Score', 'Final_Score', 'Assignments_Avg',
-                  'Quizzes_Avg', 'Participation_Score', 'Projects_Score', 'Total_Score',
-                  'Study_Hours_per_Week', 'Age', 'Stress_Level (1-10)', 'Sleep_Hours_per_Night']
-categorical_cols = ['Gender', 'Department', 'Grade', 'Extracurricular_Activities',
-                    'Internet_Access_at_Home', 'Parent_Education_Level', 'Family_Income_Level']
-
 
 # Get spaCy embedding
 def get_spacy_embedding(text):
@@ -65,6 +59,28 @@ def get_spacy_embedding(text):
     if not vectors:  # If all tokens are stop words, return zero vector
         return np.zeros(300)
     return np.mean(vectors, axis=0)
+
+
+# # Load BERT model and tokenizer
+# try:
+#     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+#     bert_model = BertModel.from_pretrained('bert-base-uncased')
+#     bert_model.eval()
+# except Exception as e:
+#     st.error(f"Error loading BERT model: {e}")
+#     tokenizer, bert_model = None, None
+#
+#
+# def get_bert_embedding(text):
+#     """
+#     Generate a BERT embedding for the input text.
+#     """
+#     if not tokenizer or not bert_model or pd.isna(text) or str(text).strip() == "":
+#         return np.zeros(768)
+#     inputs = tokenizer(str(text), return_tensors="pt", truncation=True, padding=True, max_length=128)
+#     with torch.no_grad():
+#         outputs = bert_model(**inputs)
+#     return outputs.last_hidden_state.mean(dim=1).squeeze().numpy()
 
 
 @st.cache_data
@@ -122,83 +138,14 @@ def normalize_data(df, numerical_cols, categorical_cols):
     return df_normalized
 
 
-def compute_sentiment_scores(texts, sentiment_pipeline=None):
-    """
-    Compute sentiment scores for a list of texts using a preloaded sentiment pipeline.
-
-    Parameters:
-    - texts (list): List of text strings.
-    - sentiment_pipeline: Preloaded sentiment analysis pipeline (optional).
-
-    Returns:
-    - list: List of sentiment scores.
-    """
-    if sentiment_pipeline is None:
-        sentiment_pipeline = load_sentiment_pipeline()
-    return get_sentiment_scores([str(text) if not pd.isna(text) else "" for text in texts], sentiment_pipeline)
-
-
-def prepare_student_features(student_data, coursecontent_text, labwork_text, sentiment_pipeline=None):
-    """
-    Prepare student features for analysis, including normalization, sentiment scoring, and embeddings.
-
-    Parameters:
-    - student_data (pd.DataFrame): Student data.
-    - coursecontent_text (str): Course content feedback.
-    - labwork_text (str): Lab work feedback.
-    - numerical_cols (list): Numerical columns.
-    - categorical_cols (list): Categorical columns.
-    - sentiment_pipeline: Preloaded sentiment analysis pipeline (optional).
-
-    Returns:
-    - tuple: (normalized_data, X_integrated)
-        - normalized_data (pd.DataFrame): Normalized student data with sentiment scores.
-        - X_integrated (np.ndarray): Integrated features array for unsupervised decision-making.
-    """
-    # Normalize the core student data
-    normalized_data = normalize_data(student_data, numerical_cols, categorical_cols)
-
-    if coursecontent_text == "" or labwork_text == "" or sentiment_pipeline is None:
-        X_integrated = None
-    else:
-        # Compute sentiment scores
-        coursecontent_polarity = compute_sentiment_scores([coursecontent_text], sentiment_pipeline)[0]
-        labwork_polarity = compute_sentiment_scores([labwork_text], sentiment_pipeline)[0]
-
-        # Add sentiment scores to normalized data
-        normalized_data["coursecontent_sentiment_score"] = coursecontent_polarity
-        normalized_data["labwork_sentiment_score"] = labwork_polarity
-
-        # Compute embeddings
-        embedding_dim = 300
-        coursecontent_embedding = get_spacy_embedding(coursecontent_text)
-        labwork_embedding = get_spacy_embedding(labwork_text)
-        coursecontent_features = [f"coursecontent_embedding_{i}" for i in range(embedding_dim)]
-        labwork_features = [f"labwork_embedding_{i}" for i in range(embedding_dim)]
-        coursecontent_df = pd.DataFrame([coursecontent_embedding], columns=coursecontent_features,
-                                        index=student_data.index).astype(np.float32)
-        labwork_df = pd.DataFrame([labwork_embedding], columns=labwork_features, index=student_data.index).astype(
-            np.float32)
-
-        # Combine all features for X_integrated
-        X_integrated = pd.concat([
-            normalized_data[numerical_cols + categorical_cols +
-                            ["coursecontent_sentiment_score", "labwork_sentiment_score"]],
-            coursecontent_df,
-            labwork_df
-        ], axis=1, ignore_index=False).astype(np.float32)
-
-        # Handle any NaNs
-        X_integrated.fillna(0, inplace=True)
-
-        # Convert to Numpy array
-        X_integrated.to_numpy()
-
-    return normalized_data, X_integrated
-
-
 @st.cache_data
 def preprocess_data(analytics_df, feedback_df):
+    numerical_cols = ['Attendance (%)', 'Midterm_Score', 'Final_Score', 'Assignments_Avg',
+                      'Quizzes_Avg', 'Participation_Score', 'Projects_Score', 'Total_Score',
+                      'Study_Hours_per_Week', 'Age', 'Stress_Level (1-10)', 'Sleep_Hours_per_Night']
+    categorical_cols = ['Gender', 'Department', 'Grade', 'Extracurricular_Activities',
+                        'Internet_Access_at_Home', 'Parent_Education_Level', 'Family_Income_Level']
+
     # Preprocess analytics-only data
     analytics_only_df = analytics_df.copy()
     analytics_only_df = normalize_data(analytics_only_df, numerical_cols, categorical_cols)
@@ -263,25 +210,32 @@ def preprocess_data(analytics_df, feedback_df):
     merged_df["coursecontent_text_cleaned"] = merged_df["coursecontent_text"].apply(preprocess_text)
     merged_df["labwork_text_cleaned"] = merged_df["labwork_text"].apply(preprocess_text)
 
-    # Generate sentiment scores
+    # Generate sentiment scores if not already in the merged dataframe
     sentiment_pipeline = load_sentiment_pipeline()
     if 'coursecontent_sentiment_score' not in merged_df.columns or merged_df[
         'coursecontent_sentiment_score'].isnull().all():
-        merged_df['coursecontent_sentiment_score'] = compute_sentiment_scores(
-            merged_df["coursecontent_text"].fillna("").tolist(),
-            sentiment_pipeline
-        )
+        coursecontent_text = merged_df["coursecontent_text"].fillna("").tolist()
+        merged_df['coursecontent_sentiment_score'] = get_sentiment_scores(coursecontent_text,
+                                                                          sentiment_pipeline)
 
     if 'labwork_sentiment_score' not in merged_df.columns or merged_df['labwork_sentiment_score'].isnull().all():
-        merged_df['labwork_sentiment_score'] = compute_sentiment_scores(
-            merged_df["labwork_text"].fillna("").tolist(),
-            sentiment_pipeline
-        )
+        labwork_text = merged_df["labwork_text"].fillna("").tolist()
+        merged_df['labwork_sentiment_score'] = get_sentiment_scores(labwork_text, sentiment_pipeline)
 
     # Dropout label
+    # def determine_dropout(row):
+    #     if row["Grade"] == 4:
+    #         return 1
+    #     if row["Total_Score"] < 0.3:
+    #         return 1
+    #     if row["Attendance (%)"] < 0.3:
+    #         return 1
+    #     if row["Stress_Level (1-10)"] > 0.9:
+    #         return 1
+    #     return 0
+
     def determine_dropout(row):
-        if row["Grade"] in [2, 3, 4] and row["Total_Score"] < 0.6 and row["Attendance (%)"] < 0.6 and row[
-            "Stress_Level (1-10)"] > 0.4:
+        if row["Grade"] in [2, 3, 4] and row["Total_Score"] < 0.6 and row["Attendance (%)"] < 0.6 and row["Stress_Level (1-10)"] > 0.4:
             return 1
         return 0
 
@@ -296,6 +250,10 @@ def preprocess_data(analytics_df, feedback_df):
         coursecontent_embeddings = embeddings["coursecontent"]
         labwork_embeddings = embeddings["labwork"]
     else:
+        # spacy already preprocesses the text by removing non-essential stopwords
+        # coursecontent_embeddings = np.array([
+        #     get_spacy_embedding(text) for text in merged_df["coursecontent_text_cleaned"]
+        # ], dtype=np.float32)
         coursecontent_embeddings = np.array([
             get_spacy_embedding(text) for text in merged_df["coursecontent_text"]
         ], dtype=np.float32)
@@ -345,6 +303,7 @@ def preprocess_data(analytics_df, feedback_df):
     print(f"Integrated PCA model saved to {pca_integrated_path}")
 
     integrated_data = merged_df.copy()
+    # integrated_data[integrated_features] = X_integrated
     integrated_data.to_csv("data/integrated_data_polarity.csv", index=False, header=True)
     print("Integrated dataset with sentiment polarity saved to data/integrated_data_polarity.csv")
 

@@ -7,10 +7,6 @@ from utils.data_preprocessing import normalize_data
 # Custom CSS for professional styling (aligned with view_all_predictions.py)
 st.markdown("""
     <style>
-    .main {
-        background-color: #f5f7fa;
-        padding: 20px;
-    }
     .section-header {
         font-size: 24px;
         font-weight: 600;
@@ -62,7 +58,6 @@ def extract_scalar(value, name="value"):
 
 def analyze_student_page():
     # Main container
-    st.markdown('<div class="main">', unsafe_allow_html=True)
     st.markdown('<h1 class="section-header">Analyze Student Performance</h1>', unsafe_allow_html=True)
     st.markdown(
         "Select a student from the cached dataset or enter new student details to predict performance, engagement, dropout risk, and recommended actions.",

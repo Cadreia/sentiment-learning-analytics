@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-
 # Custom CSS for professional styling
 st.markdown("""
     <style>
@@ -70,6 +69,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+
 def parse_classification_report(report_str):
     """Parse sklearn classification report string into a DataFrame."""
     lines = report_str.strip().split('\n')
@@ -98,10 +98,14 @@ def parse_classification_report(report_str):
 
     return pd.DataFrame(data, columns=headers)
 
+
 def predictions_page():
     # Main container
     st.markdown('<h1 class="section-header">Predictions and Model Comparison</h1>', unsafe_allow_html=True)
-    st.markdown("Review dropout risk, performance, and engagement predictions, and compare model performance with and without sentiment data.", unsafe_allow_html=True)
+    st.markdown(
+        "Review dropout risk, performance, and engagement predictions, and compare model performance with and without "
+        "sentiment data.",
+        unsafe_allow_html=True)
 
     # Check if necessary data is available in session state
     if "integrated_acc" not in st.session_state:
@@ -158,11 +162,13 @@ def predictions_page():
     with col1:
         st.markdown("**Integrated (With Sentiment)**")
         st.markdown(f'<div class="metric-box"><b>Test Accuracy:</b> {integrated_acc:.4f}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="metric-box"><b>Cross-Validation Accuracy:</b> {integrated_cv:.4f}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-box"><b>Cross-Validation Accuracy:</b> {integrated_cv:.4f}</div>',
+                    unsafe_allow_html=True)
         st.markdown("**Classification Report:**")
         try:
             report_df = parse_classification_report(integrated_report)
-            report_df[['Precision', 'Recall', 'F1-Score']] = report_df[['Precision', 'Recall', 'F1-Score']].apply(pd.to_numeric, errors='coerce')
+            report_df[['Precision', 'Recall', 'F1-Score']] = report_df[['Precision', 'Recall', 'F1-Score']].apply(
+                pd.to_numeric, errors='coerce')
 
             # Convert DataFrame to styled HTML
             html = report_df.to_html(
@@ -185,11 +191,13 @@ def predictions_page():
     with col2:
         st.markdown("**Analytics-Only (Without Sentiment)**")
         st.markdown(f'<div class="metric-box"><b>Test Accuracy:</b> {analytics_acc:.4f}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="metric-box"><b>Cross-Validation Accuracy:</b> {analytics_cv:.4f}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-box"><b>Cross-Validation Accuracy:</b> {analytics_cv:.4f}</div>',
+                    unsafe_allow_html=True)
         st.markdown("**Classification Report:**")
         try:
             report_df = parse_classification_report(analytics_report)
-            report_df[['Precision', 'Recall', 'F1-Score']] = report_df[['Precision', 'Recall', 'F1-Score']].apply(pd.to_numeric, errors='coerce')
+            report_df[['Precision', 'Recall', 'F1-Score']] = report_df[['Precision', 'Recall', 'F1-Score']].apply(
+                pd.to_numeric, errors='coerce')
 
             html = report_df.to_html(
                 index=False,
@@ -247,5 +255,4 @@ def predictions_page():
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-if __name__ == "__main__":
-    predictions_page()
+predictions_page()

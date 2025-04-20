@@ -8,7 +8,7 @@ def page():
     st.header("Agent Module Actions")
 
     # Check if actions have been executed and data is available in session state
-    if 'executed_actions' not in st.session_state or 'integrated_data' not in st.session_state:
+    if 'executed_actions' not in st.session_state or 'merged_df' not in st.session_state:
         st.warning("No actions have been executed yet. Please run the analysis on the Overview page first.")
         return
 
@@ -16,7 +16,7 @@ def page():
              "predictions.")
 
     # Retrieve integrated data
-    data = st.session_state['integrated_data']
+    data = st.session_state['merged_df']
 
     # Display flagged students
     st.subheader("Flagged Students for Review")

@@ -201,5 +201,5 @@ def cluster_visualization_page():
     ])
     st.table(styled_distribution)
 
-if __name__ == "__main__":
-    cluster_visualization_page()
+
+cluster_visualization_page()
