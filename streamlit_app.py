@@ -1,8 +1,19 @@
 import streamlit as st
 import nltk
+import spacy
+import subprocess
 
 nltk.download("punkt")
 nltk.download("stopwords")
+
+
+# Check if model is installed; if not, download it
+def ensure_spacy_model(model_name):
+    if not spacy.util.is_package(model_name):
+        subprocess.run(["python", "-m", "spacy", "download", model_name])
+
+
+ensure_spacy_model("en_core_web_md")
 
 # Streamlit page configuration for faster loading
 st.set_page_config(page_title="Sentiment Analysis & Learning Analytics", layout="centered")
