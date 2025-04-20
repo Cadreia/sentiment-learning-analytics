@@ -215,6 +215,8 @@ def preprocess_data(analytics_df, feedback_df):
 
     # Save PCA model for prediction
     pca_path = "models/pca/pca_analytics.joblib"
+    pca_dir = os.path.dirname(pca_path)
+    os.makedirs(pca_dir, exist_ok=True)         # Create the directory if it doesn't exist
     joblib.dump(pca_analytics, pca_path)
     print(f"Analytics PCA model saved to {pca_path}")
 
