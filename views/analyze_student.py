@@ -73,8 +73,8 @@ def analyze_student_page():
 
     # Load cached data
     data = st.session_state.get('merged_df')
-    test_idx = st.session_state.get('test_idx')  # Get test set indices
-    if data is None or test_idx is None:
+    test_student_ids = st.session_state.get('test_student_ids')  # Get test set ids
+    if data is None or test_student_ids is None:
         st.error("No cached data or test indices available. Please run the analysis on the Overview page first.")
         st.markdown('</div>', unsafe_allow_html=True)
         return
@@ -89,14 +89,8 @@ def analyze_student_page():
         horizontal=True
     )
 
-    student_data = None
-    coursecontent_text = ""
-    labwork_text = ""
-    student_id = "New_Student"
-
     if input_method == "Select Existing Student":
         # Dropdown for student selection (test set only)
-        test_student_ids = data.index[test_idx] if "Student_ID" not in data.columns else data.iloc[test_idx]["Student_ID"].unique()
         selected_id = st.selectbox("Select Student ID", options=[""] + list(test_student_ids), key="student_select")
 
         if selected_id:
@@ -111,8 +105,8 @@ def analyze_student_page():
             else:
                 student_data = data.loc[[selected_id]]  # Use index
             student_id = selected_id
-            coursecontent_text = student_data.get("coursecontent_text_cleaned", "No feedback available").iloc[0]
-            labwork_text = student_data.get("labwork_text_cleaned", "No feedback available").iloc[0]
+            coursecontent_text = student_data.get("coursecontent_text", "No feedback available").iloc[0]
+            labwork_text = student_data.get("labwork_text", "No feedback available").iloc[0]
 
             # Display selected student’s data
             st.markdown("**Selected Student Data**")

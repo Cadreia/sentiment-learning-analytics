@@ -21,12 +21,17 @@ def get_shap_results(sentiment_pipeline):
         # Load integrated data
         data = pd.read_csv(integrated_data_file)
 
+        # Get test_student_ids
+        if "test_student_ids" not in st.session_state:
+            raise ValueError("test_student_ids not found in session state. Run analysis on Overview page first.")
+        test_student_ids = st.session_state["test_student_ids"]
+
         # Use SHAP to explain BERT predictions
         print("Computing SHAP explanations...")
         explainer = shap.Explainer(sentiment_pipeline)
 
-        # Select a subset of data for SHAP explanation (first 10 rows)
-        subset_data = data[["coursecontent_text", "labwork_text"]].head(10)
+        # Select test set data for SHAP explanation
+        subset_data = data[data["Student_ID"].isin(test_student_ids)][["coursecontent_text", "labwork_text"]]
         coursecontent_texts_subset = subset_data["coursecontent_text"].fillna("").tolist()
         labwork_texts_subset = subset_data["labwork_text"].fillna("").tolist()
 

@@ -1,5 +1,3 @@
-# utils/preprocess.py
-import pandas as pd
 from utils.data_preprocessing import preprocess_data as preprocess_data_core
 import streamlit as st
 

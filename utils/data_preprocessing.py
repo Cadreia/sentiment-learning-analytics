@@ -7,10 +7,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import spacy
 import streamlit as st
-import torch
-from transformers import BertTokenizer, BertModel
 from scripts.sentiment_analysis import get_sentiment_scores, load_sentiment_pipeline
-from scripts.shap import get_shap_results
 import os
 import joblib
 

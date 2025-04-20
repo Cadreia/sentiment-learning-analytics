@@ -1,8 +1,12 @@
-# app.py
 import streamlit as st
+import nltk
+
+nltk.download("punkt")
+nltk.download("stopwords")
 
 # Streamlit page configuration for faster loading
 st.set_page_config(page_title="Sentiment Analysis & Learning Analytics", layout="centered")
+
 
 # Check if already integrated data exists
 def load_integrated_data():
@@ -10,10 +14,6 @@ def load_integrated_data():
         return True
     return None
 
-
-# if load_integrated_data() is None:
-#     st.warning(
-#         "Please upload both Analytics Data and Feedback Data using the Data Upload page before proceeding.")
 
 # App UI
 

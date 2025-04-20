@@ -1,6 +1,5 @@
 import streamlit as st
 import numpy as np
-import os
 
 from utils.preprocess import preprocess_data
 from scripts.modeling import train_and_evaluate_models
@@ -86,6 +85,8 @@ def page():
         # Process each test student for supervised decisions
         supervised_decisions_list = []
         test_student_ids = merged_df.iloc[test_idx]["Student_ID"].unique() if "Student_ID" in merged_df.columns else merged_df.index[test_idx]
+        st.write(test_student_ids)
+
         for student_id in test_student_ids:
             # Filter student data by Student_ID
             student_data = merged_df[merged_df["Student_ID"] == student_id] if "Student_ID" in merged_df.columns else merged_df.loc[[student_id]]
@@ -138,7 +139,7 @@ def page():
 
     # Save results to session state for use in other pages
     st.session_state["merged_df"] = merged_df
-    st.session_state["test_idx"] = test_idx
+    st.session_state["test_student_ids"] = test_student_ids
     st.session_state["clusters"] = [decision["cluster"] for decision in unsupervised_decisions_list]
     st.session_state["anomalies"] = outliers
     st.session_state["performance_pred"] = performance_pred
